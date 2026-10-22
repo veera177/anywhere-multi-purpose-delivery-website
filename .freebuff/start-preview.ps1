@@ -1,2 +1,0 @@
-$p = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run','dev','--','--port','5173','--host' -WorkingDirectory 'C:\Users\veera vadivelan\OneDrive\Desktop\react\my-react-app' -RedirectStandardOutput 'C:\Users\veera vadivelan\OneDrive\Desktop\react\.freebuff\preview-96a187be-a015-462c-ba39-c9e2ef00738f.log' -RedirectStandardError 'C:\Users\veera vadivelan\OneDrive\Desktop\react\.freebuff\preview-96a187be-a015-462c-ba39-c9e2ef00738f.log.err' -WindowStyle Hidden -PassThru
-Write-Output $p.Id
