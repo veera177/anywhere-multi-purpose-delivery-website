@@ -8,6 +8,9 @@ CREATE TABLE orders (
     payment_method VARCHAR(30) NOT NULL,
     total_amount DECIMAL(10,2) NOT NULL,
     status VARCHAR(30) DEFAULT 'PLACED',
+    tracking_status VARCHAR(50),
+    estimated_delivery_time TIMESTAMP,
+    route_id INT,
     ordered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
