@@ -25,6 +25,13 @@ function getServiceIcon(serviceType) {
     }
 }
 
+function hasMapCoordinates(marker) {
+    if (marker?.lat == null || marker?.lon == null || marker.lat === '' || marker.lon === '') return false;
+    const lat = Number(marker.lat), lon = Number(marker.lon);
+    return Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90
+        && lon >= -180 && lon <= 180 && (lat !== 0 || lon !== 0);
+}
+
 /**
  * Coverage map: renders one marker per contracted partner using its REAL
  * database coordinates, plus a coverage circle centred on each partner.
@@ -109,12 +116,14 @@ function DeliveryMap({
         const markerPoints = [];
         let coverageBounds = null;
         markers.forEach((m, i) => {
+            if (!hasMapCoordinates(m)) return;
             const mLat = Number(m.lat);
             const mLon = Number(m.lon);
-            if (!Number.isFinite(mLat) || !Number.isFinite(mLon)) return;
             markerPoints.push([mLat, mLon]);
 
             const isSelected = activeStoreId && m.id === activeStoreId;
+            const safeName = String(m.name || 'Shop').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+            const safeAddress = String(m.address || 'Verified Location').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
             const icon = L.divIcon({
                 className: `dm-shop-icon${isSelected ? ' dm-shop-selected' : ''}`,
                 html: `
@@ -125,13 +134,13 @@ function DeliveryMap({
                             </svg>
                         </div>
                         <div class="dm-shop-label-chip">
-                            <strong>${m.name}</strong>
+                            <strong title="${safeName}">${safeName}</strong>
                             ${m.rating ? `<span class="dm-rating-badge">&#9733; ${m.rating}</span>` : ''}
                         </div>
                     </div>`,
-                iconSize:    [160, 60],
-                iconAnchor:  [80, 56],
-                popupAnchor: [0, -60],
+                iconSize:    [160, 48],
+                iconAnchor:  [80, 24],
+                popupAnchor: [0, -38],
             });
 
             const marker = L.marker([mLat, mLon], { icon })
@@ -139,15 +148,15 @@ function DeliveryMap({
                 .bindPopup(`
                     <div class="dm-popup">
                         <div class="dm-popup-badge" style="background:${m.color || colors.primary}">${colors.label} #${i + 1}</div>
-                        <strong>${m.name}</strong>
-                        <small>&#128205; ${m.address || 'Verified Location'}</small>
+                        <strong>${safeName}</strong>
+                        <small>&#128205; ${safeAddress}</small>
                         <div class="dm-popup-meta">
                             ${m.rating ? `<span class="dm-popup-rating">&#11088; ${m.rating} Rating</span>` : ''}
                             <span class="dm-popup-status">&#128994; Open for delivery</span>
                         </div>
                     </div>`);
 
-            if (onSelectMarker) marker.on('click', () => onSelectMarker(m));
+            if (onSelectMarker) marker.on('click', () => { marker.openPopup(); onSelectMarker(m); });
 
             /* Coverage circle centred on THIS partner's own coordinates */
             if (radiusM) {
@@ -166,17 +175,16 @@ function DeliveryMap({
             }
         });
 
-        /* Fit map to partner locations */
+        /* Every visible provider gets its own true-to-scale circle centered
+           on its stored coordinates, with its name chip centered at that point. */
         if (markerPoints.length > 0) {
-            // Include service-radius circles, not only pins, so the coverage
-            // image cannot be clipped or misleading at the map edges.
-            map.fitBounds(coverageBounds || markerPoints, { padding: [60, 60], maxZoom: 15 });
+            map.fitBounds(coverageBounds || markerPoints, { padding: [100, 100], maxZoom: 13 });
         } else if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lon))) {
             map.setView([Number(lat), Number(lon)], zoom);
         }
         requestAnimationFrame(() => map.invalidateSize());
     }, [lat, lon, zoom, markers, colors, radiusM, activeStoreId, onSelectMarker, serviceType]);
-    const count = markers.filter((m) => Number.isFinite(Number(m.lat)) && Number.isFinite(Number(m.lon))).length;
+    const count = markers.filter(hasMapCoordinates).length;
 
     return (
         <div className={`dm-wrapper ${className}`}>

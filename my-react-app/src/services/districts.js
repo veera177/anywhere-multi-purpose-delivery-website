@@ -74,9 +74,8 @@ export function invalidateDistrictsCache() {
 /**
  * The district the signed-in user picked in their Profile is their active
  * service area. Every service page (Food/Grocery/Medicine/Courier) uses this as
- * its initial district so the user never has to re-select it. Matches by the
- * district `code` id first, then by display name, and falls back to the first
- * district only when the user has no stored district.
+ * its initial district. Matches the saved profile district by code or display
+ * name. Service pages never fall back to a previously browsed district.
  */
 export function resolvePreferredDistrictId(list, fallback = '') {
     const districts = Array.isArray(list) ? list : [];
@@ -84,9 +83,6 @@ export function resolvePreferredDistrictId(list, fallback = '') {
 
     let profileDistrict = '';
     try {
-        const selected = String(localStorage.getItem('selectedDistrictId') || '').trim().toLowerCase();
-        const selectedMatch = districts.find((d) => d.id === selected || String(d.dbId) === selected || String(d.name || '').toLowerCase() === selected);
-        if (selectedMatch) return selectedMatch.id;
         const user = JSON.parse(localStorage.getItem('user') || 'null');
         profileDistrict = String(user?.district || '').trim().toLowerCase();
     } catch {
@@ -101,5 +97,5 @@ export function resolvePreferredDistrictId(list, fallback = '') {
         if (match) return match.id;
     }
 
-    return districts[0]?.id ?? fallback;
+    return fallback;
 }

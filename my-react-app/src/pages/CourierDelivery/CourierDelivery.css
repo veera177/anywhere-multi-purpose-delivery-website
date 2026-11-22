@@ -148,7 +148,9 @@
   font-family: inherit;
   font-size: 0.9rem;
   font-weight: 600;
-  cursor: pointer;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ── Address grid (side-by-side on desktop) ── */

@@ -20,6 +20,22 @@
     position: relative;
 }
 
+.service-profile-district {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 16px 18px;
+    border: var(--border-normal, 1px solid rgba(148,163,184,.35));
+    border-radius: 10px;
+    background: var(--card, #fff);
+    color: var(--text, #172033);
+    font: inherit;
+    font-weight: 800;
+}
+.service-profile-district strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Floating Live Overlay Pill */
 .dm-overlay-pill {
     position: absolute;
@@ -102,6 +118,8 @@
 .dm-shop-icon {
     background: transparent !important;
     border: 0 !important;
+    display: grid !important;
+    place-items: center;
     /* Marker fade+scale-in on load — pairs with awScaleIn in index.css */
     animation: dmMarkerIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }

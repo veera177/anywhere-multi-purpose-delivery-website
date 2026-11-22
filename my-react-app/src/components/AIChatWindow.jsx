@@ -5,6 +5,7 @@ import { AI_BASE, API_BASE } from '../services/apiConfig';
 import { apiFetchJson } from '../services/apiClient';
 
 const HISTORY_KEY = 'ai_chat_history';
+const FOLLOW_UP_KEY = 'ai_chat_pending_follow_up';
 const STARTERS = [
     { title: 'Find food', prompt: 'Show biryani near me', icon: '🍽' },
     { title: 'Order groceries', prompt: 'Help me find grocery items', icon: '🛒' },
@@ -14,11 +15,49 @@ const STARTERS = [
 const EXAMPLES = ['How many restaurants in Salem?', 'Track my order', 'Cheapest food near me'];
 const QUICK_DEFAULTS = ['Find food nearby', 'Track my order', 'Book a courier'];
 
+function withoutSourceAttribution(text) {
+    return String(text || '').replace(/\n\s*Source:\s*[\s\S]*$/i, '').trim();
+}
+
 function readHistory() {
     try {
         const saved = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-        return Array.isArray(saved) ? saved.filter((message) => message && message.id && message.sender && message.id !== 'welcome') : [];
+        return Array.isArray(saved) ? saved
+            .filter((message) => message && message.id && message.sender && message.id !== 'welcome')
+            .map((message) => message.sender === 'assistant' ? { ...message, text: withoutSourceAttribution(message.text) } : message) : [];
     } catch { return []; }
+}
+
+function readPendingFollowUp() {
+    try {
+        const pending = JSON.parse(localStorage.getItem(FOLLOW_UP_KEY) || 'null');
+        if (!pending?.message || Number(pending.expiresAt) < Date.now()) {
+            localStorage.removeItem(FOLLOW_UP_KEY);
+            return null;
+        }
+        return pending;
+    } catch { return null; }
+}
+
+function affirmativeReply(text) {
+    const normalized = text.trim().toLowerCase().replace(/[,.!?]/g, ' ').replace(/\s+/g, ' ').trim();
+    return /^(?:yes|yeah|yep|sure|please|okay|ok|go ahead|show me|that would be great)(?:\s+(?:please|show me|go ahead|do that))*$/.test(normalized);
+}
+
+function offeredFollowUp(userText, assistantText, district) {
+    const offersNextStep = /\b(?:would you like|shall i|should i|want me to|do you want me to)\b/i.test(assistantText);
+    if (!offersNextStep) return null;
+    const combined = `${userText} ${assistantText}`.toLowerCase();
+    let subject = null;
+    if (/restaurant|restaurants|hotel|hotels|kitchen|biryani|dish|dishes|food/.test(combined)) subject = 'restaurants';
+    else if (/grocery|groceries|store|stores|market/.test(combined)) subject = 'grocery stores';
+    else if (/pharmacy|pharmacies|medicine|medicines|chemist/.test(combined)) subject = 'pharmacies';
+    if (!subject || !/\b(?:name|names|list|show|provide|tell)\b/i.test(assistantText)) return null;
+    const districtText = String(district || '').trim();
+    return {
+        message: `show me the ${subject} in ${districtText || 'my district'}`,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+    };
 }
 
 function timestampNow() { return new Date().toISOString(); }
@@ -40,11 +79,12 @@ function readableReply(data) {
             reply = typeof parsed === 'string' ? parsed : parsed?.reply ?? parsed?.message ?? parsed?.content ?? parsed?.text ?? '';
         } catch { reply = ''; }
     }
-    return String(reply || '').replaceAll('â‚¹', '₹').replaceAll('â˜…', '★').replaceAll('â­', '★').replaceAll('�', '');
+    return withoutSourceAttribution(String(reply || '').replaceAll('â‚¹', '₹').replaceAll('â˜…', '★').replaceAll('â­', '★').replaceAll('�', ''));
 }
 
 function AIChatWindow({ onClose, onMinimize, onAction }) {
     const [messages, setMessages] = useState(readHistory);
+    const [pendingFollowUp, setPendingFollowUp] = useState(readPendingFollowUp);
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [thinkingLong, setThinkingLong] = useState(false);
@@ -137,6 +177,10 @@ function AIChatWindow({ onClose, onMinimize, onAction }) {
     const handleSend = async (requestedText = inputValue) => {
         const messageText = String(requestedText || '').trim().slice(0, 500);
         if (!messageText || isTyping) return;
+        const acceptedFollowUp = pendingFollowUp && affirmativeReply(messageText) ? pendingFollowUp : null;
+        const requestText = acceptedFollowUp?.message || messageText;
+        setPendingFollowUp(null);
+        localStorage.removeItem(FOLLOW_UP_KEY);
         if (requestedText === inputValue) setInputValue('');
         setInputRows(1);
         const sentAt = timestampNow();
@@ -153,10 +197,23 @@ function AIChatWindow({ onClose, onMinimize, onAction }) {
                 method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
                 // The backend takes identity exclusively from the JWT. District is
                 // optional UI context, not an authorization input.
-                body: JSON.stringify({ message: messageText, district }),
+                body: JSON.stringify({
+                    message: requestText,
+                    district,
+                    // The backend uses only recent visible turns to resolve brief
+                    // follow-ups; identity and account access still come from JWT.
+                    conversationHistory: messages.slice(-12)
+                        .filter((message) => ['user', 'assistant'].includes(message.sender) && !message.errorKind)
+                        .map((message) => ({ sender: message.sender, text: String(message.text || '').slice(0, 1000) })),
+                }),
             }, { retries: 0 });
             const reply = readableReply(data);
             const noData = /\bno (?:matching )?(?:items?|results?|products?|restaurants?|stores?|pharmacies)\b.*\b(?:found|available)\b|\bnothing (?:was )?found\b|\bno data found\b/i.test(reply);
+            const nextFollowUp = offeredFollowUp(requestText, reply, district);
+            if (nextFollowUp) {
+                setPendingFollowUp(nextFollowUp);
+                localStorage.setItem(FOLLOW_UP_KEY, JSON.stringify(nextFollowUp));
+            }
             addMessage({ id: `assistant-${Date.now()}-${sequenceRef.current++}`, sender: 'assistant', text: reply || 'I couldn’t find a response. Please try again.', timestamp: timestampNow(), ...(noData ? { errorKind: 'no-data' } : {}) });
             speakText(reply);
             if (data?.action && data.action !== 'NONE') window.setTimeout(() => onAction?.(data.action, data.actionData), 900);
@@ -166,7 +223,11 @@ function AIChatWindow({ onClose, onMinimize, onAction }) {
                 : kind === 'unauthorized' ? 'Your session has expired. Please sign in again.'
                 : kind === 'server' ? 'The assistant server returned an error. Please retry in a moment.'
                     : 'I can’t reach the assistant server right now. Check the connection and try again.';
-            addMessage({ id: `error-${Date.now()}-${sequenceRef.current++}`, sender: 'assistant', text, timestamp: timestampNow(), errorKind: kind, retryText: messageText });
+            if (acceptedFollowUp) {
+                setPendingFollowUp(acceptedFollowUp);
+                localStorage.setItem(FOLLOW_UP_KEY, JSON.stringify(acceptedFollowUp));
+            }
+            addMessage({ id: `error-${Date.now()}-${sequenceRef.current++}`, sender: 'assistant', text, timestamp: timestampNow(), errorKind: kind, retryText: requestText });
         } finally { window.clearTimeout(longTimer); setThinkingLong(false); setIsTyping(false); }
     };
 
@@ -182,7 +243,7 @@ function AIChatWindow({ onClose, onMinimize, onAction }) {
     };
 
     const handleClear = () => {
-        setMessages([]); setConfirmClear(false); localStorage.removeItem(HISTORY_KEY);
+        setMessages([]); setPendingFollowUp(null); setConfirmClear(false); localStorage.removeItem(HISTORY_KEY); localStorage.removeItem(FOLLOW_UP_KEY);
     };
 
     const handleScroll = () => {

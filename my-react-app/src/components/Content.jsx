@@ -67,7 +67,7 @@ function Content({ onExploreDistricts }) {
                             Explore Services
                         </button>
                         <a href="tel:9876543210" className="hero-phone-btn">
-                            Call 98765 43210
+                            Call 98765xxxxx
                         </a>
                         <button type="button" className="hero-district-btn" onClick={onExploreDistricts}>Explore districts →</button>
                     </div>
@@ -77,7 +77,7 @@ function Content({ onExploreDistricts }) {
                             <span className="cta-icon" aria-hidden="true">01</span>
                             <div>
                                 <span className="cta-label">Call to order</span>
-                                <span className="cta-value">98765 43210</span>
+                                <span className="cta-value">98765xxxxx</span>
                             </div>
                         </div>
                         <div className="cta-divider"></div>

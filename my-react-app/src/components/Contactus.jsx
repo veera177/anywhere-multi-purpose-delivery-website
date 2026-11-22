@@ -132,7 +132,7 @@ function Contactus() {
                             <span className="ft-contact-icon" aria-hidden="true">📞</span>
                             <div>
                                 <p className="ft-contact-label">Phone</p>
-                                <a className="ft-link" href="tel:9876543210">98765 43210</a>
+                                <a className="ft-link" href="tel:9876543210">98765xxxxx</a>
                             </div>
                         </div>
                         <div className="ft-contact-item">

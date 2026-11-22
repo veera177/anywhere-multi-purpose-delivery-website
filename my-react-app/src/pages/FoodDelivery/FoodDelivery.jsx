@@ -39,14 +39,9 @@ function FoodDelivery({ onBack, onGoToCart }) {
         let cancelled = false;
         getDistricts().then((list) => {
             if (cancelled) return;
-            const availableDistricts = list.filter((district) => Number(district.partnerCounts?.food || 0) > 0);
-            setDistricts(availableDistricts);
+            setDistricts(list);
             // Profile district is the user's active service area.
-            setSelectedDistrictId((current) =>
-                current && availableDistricts.some((d) => d.id === current)
-                    ? current
-                    : resolvePreferredDistrictId(availableDistricts, '')
-            );
+            setSelectedDistrictId(resolvePreferredDistrictId(list, ''));
         });
         getServiceRadiusKm('food').then((km) => {
             if (!cancelled) setRadiusKm(km);
@@ -314,36 +309,10 @@ function FoodDelivery({ onBack, onGoToCart }) {
 
                     <div className="food-search-panel">
 
-                        <select
-                            value={selectedDistrictId}
-                            onChange={(event) => {
-
-                                setSelectedDistrictId(
-                                    event.target.value
-                                );
-
-                                setSelectedCategory('All');
-
-                                setSearchTerm('');
-
-                                setSelectedRestaurant(null);
-                            }}
-                        >
-
-                            {
-                                districts.map((location) => (
-
-                                    <option
-                                        key={location.id}
-                                        value={location.id}
-                                    >
-                                        {location.name}
-                                    </option>
-
-                                ))
-                            }
-
-                        </select>
+                        <div className="service-profile-district" aria-label="Service district from your profile">
+                            <span aria-hidden="true">📍</span>
+                            <strong>{districtName === '…' ? 'Set district in Profile' : districtName}</strong>
+                        </div>
 
                         <input
                             type="search"

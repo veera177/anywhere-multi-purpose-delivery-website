@@ -28,14 +28,9 @@ function MedicineDelivery({ onBack, onGoToCart, onUploadPrescription }) {
         let cancelled = false;
         getDistricts().then((list) => {
             if (cancelled) return;
-            const availableDistricts = list.filter((district) => Number(district.partnerCounts?.medicine || 0) > 0);
-            setDistricts(availableDistricts);
+            setDistricts(list);
             // Profile district is the user's active service area.
-            setSelectedDistrictId((current) =>
-                current && availableDistricts.some((d) => d.id === current)
-                    ? current
-                    : resolvePreferredDistrictId(availableDistricts, '')
-            );
+            setSelectedDistrictId(resolvePreferredDistrictId(list, ''));
         });
         getServiceRadiusKm('medicine').then((km) => {
             if (!cancelled) setRadiusKm(km);
@@ -286,29 +281,10 @@ function MedicineDelivery({ onBack, onGoToCart, onUploadPrescription }) {
                     {/* Prescription toolbar — §8 placement: beside the search */}
                     <div className="medicine-toolbar">
                         <div className="medicine-search-panel">
-                            <select
-                                className="medicine-search-select"
-                                value={selectedDistrictId}
-                                onChange={(event) => {
-                                    setSelectedDistrictId(
-                                        event.target.value
-                                    );
-                                    setSelectedCategory('All');
-                                    setSearchTerm('');
-                                    setSelectedPharmacy(null);
-                                }}
-                            >
-                                {
-                                    districts.map((location) => (
-                                        <option
-                                            key={location.id}
-                                            value={location.id}
-                                        >
-                                            {location.name}
-                                        </option>
-                                    ))
-                                }
-                            </select>
+                            <div className="service-profile-district" aria-label="Service district from your profile">
+                                <span aria-hidden="true">📍</span>
+                                <strong>{districtName === '…' ? 'Set district in Profile' : districtName}</strong>
+                            </div>
 
                             <div className="medicine-search-field">
                                 <Icons.Search className="medicine-search-icon" />

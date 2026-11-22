@@ -134,7 +134,7 @@ function Partner() {
                             </svg>
                             Call to Become a Partner
                         </a>
-                        <span className="partner-contact-note">📞 98765 43210 · Mon–Sat, 9AM–6PM</span>
+                        <span className="partner-contact-note">📞 98765xxxxx · Mon–Sat, 9AM–6PM</span>
                     </div>
                 </div>
 

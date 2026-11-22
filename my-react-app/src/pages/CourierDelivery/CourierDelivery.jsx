@@ -61,7 +61,7 @@ function CourierDelivery({ onBack, onProceedToPayment }) {
     getDistricts().then((list) => {
       if (cancelled) return;
       setDistricts(list);
-      setDistrict((cur) => cur || resolvePreferredDistrictId(list));
+      setDistrict(resolvePreferredDistrictId(list, ''));
     });
     return () => { cancelled = true; };
   }, []);
@@ -252,22 +252,9 @@ function CourierDelivery({ onBack, onProceedToPayment }) {
         <section className="courier-section">
           <div className="courier-section-header">
             <h2>Where to and from?</h2>
-            {districts.length > 0 && (
-              <select
-                className="courier-district-select"
-                value={district}
-                onChange={(e) => {
-                  setDistrict(e.target.value);
-                  setPickup(null); setPickupLabel('');
-                  setDrop(null);   setDropLabel('');
-                }}
-                aria-label="Service district"
-              >
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            )}
+            <span className="courier-district-select" aria-label="Service district from your profile">
+              📍 {districtName === 'your district' ? 'Set district in Profile' : districtName}
+            </span>
           </div>
 
           <div className="courier-address-grid">

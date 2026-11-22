@@ -294,7 +294,7 @@ function Register({ onBack, onSignInClick }) {
                             id="phone" 
                             name="phone"
                             className="form-input" 
-                            placeholder="98765 43210"
+                            placeholder="98765xxxxx"
                             value={formData.phone}
                             onChange={handleChange}
                             required 
